@@ -3,6 +3,10 @@ import os
 from google.genai import types
 from dotenv import load_dotenv
 import sys
+from functions.get_files_info import schema_get_files_info
+from functions.python_runner import schema_run_python
+from functions.write_file_content import schema_write_file
+from functions.file_content import schema_file_content
 
 def main():
     load_dotenv()
@@ -29,17 +33,69 @@ def main():
     ]
 
     
+    system_prompt=system_prompt = """
+You are a helpful AI coding agent.
+
+When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
+
+- List files and directories
+- Read file contents
+- Execute Python files with optional arguments
+- Write or overwrite files
+
+All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+"""
+
+
+    available_functions = types.Tool(
+        function_declarations=[
+              schema_get_files_info,
+              schema_file_content,
+              schema_run_python,
+              schema_write_file
+          ]
+    )
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     def generate_content(client, messages):
         response = client.models.generate_content(
             model="gemini-2.0-flash-001",
             contents=messages,
+
+            config=types.GenerateContentConfig(
+            tools=[available_functions], system_instruction=system_prompt
                 )
+
+                )
+        
+
         if verbose:
             print(f'ai response :{response.text}')
-        else:    
-            print(response.text ,response.usage_metadata.prompt_token_count,response.usage_metadata.candidates_token_count)
+        if not response.function_calls:
+            return response.text
+
+        for function_call_part in response.function_calls:
+            print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+
+
+        
     generate_content(client, messages)
 if __name__ == "__main__":
     main()
