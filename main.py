@@ -74,42 +74,58 @@ All paths you provide should be relative to the working directory. You do not ne
 
 
 
-    def generate_content(client, messages):
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-001",
-            contents=messages,
+    def generate_content(client, messages, verbose=False):
+      response = client.models.generate_content(
+        model="gemini-2.0-flash-001",
+        contents=messages,
+        config=types.GenerateContentConfig(
+            tools=[available_functions],
+            system_instruction=system_prompt
+        )
+    )
 
-            config=types.GenerateContentConfig(
-            tools=[available_functions], system_instruction=system_prompt
-                )
-
-                )
-        
-
+      for candidate in response.candidates:
+        ai_message = candidate.content
+      
+        messages.append(ai_message) 
+        print(ai_message)
+        print('message   --is')
+        print(messages)
         if verbose:
-            print(f'ai response :{response.text}')
-        if not response.function_calls:
-            return response.text
+            print(f"AI candidate response: {ai_message}")
 
-        for function_call_part in response.function_calls:
-            print(f"Calling function: {response.function_calls} {function_call_part.name}_______>{function_call_part.args})")
-        function_responses = []
-        for function_call_part in response.function_calls:
-            function_call_result = call_function(function_call_part, verbose)
-            if (
-            not function_call_result.parts
-            or not function_call_result.parts[0].function_response
-        ):
-             raise Exception("empty function call result")
-        if verbose:
-            print(f"-> {function_call_result.parts[0].function_response.response}")
-        function_responses.append(function_call_result.parts[0])
+        function_calls = [
+            part.function_call for part in ai_message.parts if part.function_call
+        ]
 
-        if not function_responses:
-           raise Exception("no function responses generated, exiting.")
-     
+        if function_calls:
+            for fc in function_calls:
+                if verbose:
+                    print(f"Calling function: {fc.name} with args {fc.args}")
 
-        
+                function_call_result = call_function(fc, verbose)
+
+                if (
+                    not function_call_result.parts
+                    or not function_call_result.parts[0].function_response
+                ):
+                    raise Exception("empty function call result")
+
+                result_msg = types.Content(
+                    role="user",
+                    parts=[function_call_result.parts[0]]
+                )
+                print('message here')
+                
+                messages.append(result_msg)
+                print(messages)
+                if verbose:
+                    print(f"-> Function response: {function_call_result.parts[0].function_response.response}")
+
+                return generate_content(client, messages, verbose)
+
+        return response.candidates[0].content if response.candidates else None
+
     generate_content(client, messages)
 if __name__ == "__main__":
     main()

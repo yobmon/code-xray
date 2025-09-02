@@ -30,7 +30,7 @@ def call_function(function_call_part, verbose=False):
                 )
             ],
         )
-    working_dir="./calculator_for_agent_test"
+    working_dir="./calculator_test_agent"
     args =dict(function_call_part.args)
     args['working_directory']=working_dir
     function_result = func_map[function_name](**args)
