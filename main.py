@@ -7,7 +7,7 @@ from functions.get_files_info import schema_get_files_info
 from functions.python_runner import schema_run_python
 from functions.write_file_content import schema_write_file
 from functions.file_content import schema_file_content
-
+from fun_handler.func_handler import call_function
 def main():
     load_dotenv()
     args=sys.argv[1:]
@@ -92,8 +92,22 @@ All paths you provide should be relative to the working directory. You do not ne
             return response.text
 
         for function_call_part in response.function_calls:
-            print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+            print(f"Calling function: {response.function_calls} {function_call_part.name}_______>{function_call_part.args})")
+        function_responses = []
+        for function_call_part in response.function_calls:
+            function_call_result = call_function(function_call_part, verbose)
+            if (
+            not function_call_result.parts
+            or not function_call_result.parts[0].function_response
+        ):
+             raise Exception("empty function call result")
+        if verbose:
+            print(f"-> {function_call_result.parts[0].function_response.response}")
+        function_responses.append(function_call_result.parts[0])
 
+        if not function_responses:
+           raise Exception("no function responses generated, exiting.")
+     
 
         
     generate_content(client, messages)

@@ -35,7 +35,7 @@ def python_file_runner(working_directory, file_path, args=[]):
         return f"Error: executing Python file: {e}"
 
 schema_run_python = types.FunctionDeclaration(
-     name="python_file_runner",
+    name="python_file_runner",
     description="Executes a Python file within the working directory and returns the output from the interpreter.",
     parameters=types.Schema(
         type=types.Type.OBJECT,
